@@ -1,0 +1,101 @@
+diff -Nru linux-2.4.23/Documentation/Configure.help linux-2.4.23fb/Documentation/Configure.help
+--- linux-2.4.23/Documentation/Configure.help	Fri Nov 28 19:26:19 2003
++++ linux-2.4.23fb/Documentation/Configure.help	Tue Jan 20 18:50:06 2004
+@@ -5159,6 +5159,19 @@
+   As this card technology is 15 years old, most people will answer N
+   here.
+ 
++Chips 65548/45/40 display support
++CONFIG_FB_CT65548
++  This is the frame buffer device driver for the Chips & Technologies
++  65548 graphics chip in Toshiba Satellite Pro notebooks.
++  There is also experimental support for C&T 65545 and 65540 chipsets.
++  To use it as compiled in kernel you have to disable VGA text console
++  support above and pass "vga=377" parameter to kernel on boot.
++  When using as a module you may have VGA text console compiled in but
++  before loading ct48fb.o module you have to run a small program
++  that will execute BIOS real mode interrupt 10h with ax=0x4f02 and
++  bx=0x0101.
++  (see http://members.elysium.pl/ytm/html/linux.html for details)
++
+ Epson 1355 framebuffer support
+ CONFIG_FB_E1355
+   Build in support for the SED1355 Epson Research Embedded RAMDAC
+diff -Nru linux-2.4.23/drivers/video/Config.in linux-2.4.23fb/drivers/video/Config.in
+--- linux-2.4.23/drivers/video/Config.in	Fri Nov 28 19:26:20 2003
++++ linux-2.4.23fb/drivers/video/Config.in	Mon Jan 19 18:38:14 2004
+@@ -96,6 +96,9 @@
+       tristate '  Hercules mono graphics console (EXPERIMENTAL)' CONFIG_FB_HGA
+       define_bool CONFIG_VIDEO_SELECT y
+    fi
++   if [ "$CONFIG_EXPERIMENTAL" = "y" ]; then
++      tristate '  Chips 65548 display support (EXPERIMENTAL)' CONFIG_FB_CT65548
++   fi
+    if [ "$CONFIG_IA64" = "y" ]; then
+       tristate '  VGA 16-color graphics console' CONFIG_FB_VGA16
+    fi
+@@ -297,6 +300,7 @@
+ 	   "$CONFIG_FB_VALKYRIE" = "y" -o "$CONFIG_FB_PLATINUM" = "y" -o \
+            "$CONFIG_FB_IGA" = "y" -o "$CONFIG_FB_MATROX" = "y" -o \
+ 	   "$CONFIG_FB_CT65550" = "y" -o "$CONFIG_FB_PM2" = "y" -o \
++	   "$CONFIG_FB_CT65548" = "y" -o \
+            "$CONFIG_FB_PM3" = "y" -o "$CONFIG_FB_TRIDENT" = "y" -o \
+ 	   "$CONFIG_FB_P9100" = "y" -o "$CONFIG_FB_ATY128" = "y" -o \
+ 	   "$CONFIG_FB_RIVA" = "y" -o "$CONFIG_FB_RADEON" = "y" -o \
+@@ -321,6 +325,7 @@
+ 	      "$CONFIG_FB_VALKYRIE" = "m" -o "$CONFIG_FB_PLATINUM" = "m" -o \
+               "$CONFIG_FB_IGA" = "m" -o "$CONFIG_FB_MATROX" = "m" -o \
+ 	      "$CONFIG_FB_CT65550" = "m" -o "$CONFIG_FB_PM2" = "m" -o \
++	      "$CONFIG_FB_CT65548" = "m" -o \
+               "$CONFIG_FB_PM3" = "m" -o "$CONFIG_FB_TRIDENT" = "m" -o \
+ 	      "$CONFIG_FB_P9100" = "m" -o "$CONFIG_FB_ATY128" = "m" -o \
+ 	      "$CONFIG_FB_RIVA" = "m" -o "$CONFIG_FB_3DFX" = "m" -o \
+@@ -343,6 +348,7 @@
+ 	   "$CONFIG_FB_VIRGE" = "y" -o "$CONFIG_FB_CYBER" = "y" -o \
+ 	   "$CONFIG_FB_VALKYRIE" = "y" -o "$CONFIG_FB_PLATINUM" = "y" -o \
+ 	   "$CONFIG_FB_CT65550" = "y" -o "$CONFIG_FB_MATROX" = "y" -o \
++	   "$CONFIG_FB_CT65548" = "y" -o \
+ 	   "$CONFIG_FB_PM2" = "y" -o "$CONFIG_FB_SGIVW" = "y" -o \
+            "$CONFIG_FB_PM3" = "y" -o "$CONFIG_FB_TRIDENT" = "y" -o \
+ 	   "$CONFIG_FB_RIVA" = "y" -o "$CONFIG_FB_ATY128" = "y" -o \
+@@ -360,6 +366,7 @@
+ 	      "$CONFIG_FB_VIRGE" = "m" -o "$CONFIG_FB_CYBER" = "m" -o \
+ 	      "$CONFIG_FB_VALKYRIE" = "m" -o "$CONFIG_FB_PLATINUM" = "m" -o \
+ 	      "$CONFIG_FB_CT65550" = "m" -o "$CONFIG_FB_MATROX" = "m" -o \
++	      "$CONFIG_FB_CT65548" = "m" -o \
+ 	      "$CONFIG_FB_PM2" = "m" -o "$CONFIG_FB_SGIVW" = "m" -o \
+               "$CONFIG_FB_PM3" = "m" -o "$CONFIG_FB_TRIDENT" = "m" -o \
+ 	      "$CONFIG_FB_RIVA" = "m" -o "$CONFIG_FB_ATY128" = "m" -o \
+diff -Nru linux-2.4.23/drivers/video/Makefile linux-2.4.23fb/drivers/video/Makefile
+--- linux-2.4.23/drivers/video/Makefile	Mon Aug 25 13:44:42 2003
++++ linux-2.4.23fb/drivers/video/Makefile	Mon Jan 19 18:36:43 2004
+@@ -55,6 +55,7 @@
+ obj-$(CONFIG_FB_PLATINUM)         += platinumfb.o
+ obj-$(CONFIG_FB_VALKYRIE)         += valkyriefb.o
+ obj-$(CONFIG_FB_CT65550)          += chipsfb.o
++obj-$(CONFIG_FB_CT65548)          += ct48fb.o fbgen.o
+ obj-$(CONFIG_FB_CYBER)            += cyberfb.o
+ obj-$(CONFIG_FB_CYBER2000)        += cyber2000fb.o
+ obj-$(CONFIG_FB_SGIVW)            += sgivwfb.o
+diff -Nru linux-2.4.23/drivers/video/fbmem.c linux-2.4.23fb/drivers/video/fbmem.c
+--- linux-2.4.23/drivers/video/fbmem.c	Mon Aug 25 13:44:42 2003
++++ linux-2.4.23fb/drivers/video/fbmem.c	Mon Jan 19 18:39:57 2004
+@@ -105,6 +105,8 @@
+ extern int valkyriefb_init(void);
+ extern int valkyriefb_setup(char*);
+ extern int chips_init(void);
++extern int ct48fb_init(void);
++extern int ct48fb_setup(char*);
+ extern int g364fb_init(void);
+ extern int sa1100fb_init(void);
+ extern int fm2fb_init(void);
+@@ -218,6 +220,9 @@
+ #ifdef CONFIG_FB_CT65550
+ 	{ "chipsfb", chips_init, NULL },
+ #endif
++#ifdef CONFIG_FB_CT65548
++	{ "ct48fb", ct48fb_init, ct48fb_setup },
++#endif
+ #ifdef CONFIG_FB_IMSTT
+ 	{ "imsttfb", imsttfb_init, imsttfb_setup },
+ #endif
